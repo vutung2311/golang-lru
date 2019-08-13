@@ -85,6 +85,24 @@ func (c *Cache) ContainsOrAdd(key, value interface{}) (ok, evicted bool) {
 	return false, evicted
 }
 
+// Update changes value of a specific key in a atomic way
+func (c *Cache) Update(key string, executeFunc func(val interface{}) (interface{}, bool)) bool {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+
+	var (
+		oldVal, newVal interface{}
+		ok             bool
+	)
+	oldVal, _ = c.lru.Get(key)
+	newVal, ok = executeFunc(oldVal)
+	if !ok {
+		return false
+	}
+	c.lru.Add(key, newVal)
+	return true
+}
+
 // Remove removes the provided key from the cache.
 func (c *Cache) Remove(key interface{}) (present bool) {
 	c.lock.Lock()
